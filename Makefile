@@ -698,68 +698,6 @@ coverage-html: coverage-jenkins
 coverage-jenkins:
 	python setup.py -q nosetests -c playpen/noserc.ci
 
-#
-# gettext, po files, etc
-#
-po/POTFILES.in:
-	# generate the POTFILES.in file expected by intltool. it wants one
-	# file per line, but we're lazy.
-	find $(SUBMAN_SRC_DIR)/ $(RCT_SRC_DIR) $(RD_SRC_DIR) $(DAEMONS_SRC_DIR) $(YUM_PLUGINS_SRC_DIR) -name "*.py" > po/POTFILES.in
-	find $(SUBMAN_SRC_DIR)/gui/data/glade/ -name "*.glade" >> po/POTFILES.in
-	# intltool-update doesn't recognize .ui as glade files, so
-	# build a dir of .glade symlinks to the .ui files and add to POTFILES.in
-	mkdir -p po/tmp_ui_links
-	for ui_file in ./$(SUBMAN_SRC_DIR)/gui/data/ui/*.ui ; do \
-		ui_base=$$(basename "$$ui_file") ; \
-		ln -f -s "../../$$ui_file" "po/tmp_ui_links/$$ui_base.glade" ; \
-	done ;
-	find po/tmp_ui_links/ -name "*.glade"  >> po/POTFILES.in
-	find $(BIN_DIR) -name "*-to-rhsm" >> po/POTFILES.in
-	find $(BIN_DIR) -name "subscription-manager*" >> po/POTFILES.in
-	find $(BIN_DIR) -name "rct" >> po/POTFILES.in
-	find $(BIN_DIR) -name "rhsm-debug" >> po/POTFILES.in
-	find src/ -name "*.c" >> po/POTFILES.in
-	find etc-conf/ -name "*.desktop.in" >> po/POTFILES.in
-	find $(RCT_SRC_DIR)/ -name "*.py" >> po/POTFILES.in
-	find $(RD_SRC_DIR)/ -name "*.py" >> po/POTFILES.in
-	echo $$(echo `pwd`|rev | sed -r 's|[^/]+|..|g') | sed 's|$$|$(shell find /usr/lib*/python2* -name "optparse.py")|' >> po/POTFILES.in
-
-.PHONY: po/POTFILES.in %.desktop
-
-gettext: po/POTFILES.in
-	# Extract strings from our source files. any comments on the line above
-	# the string marked for translation beginning with "translators" will be
-	# included in the pot file.
-	cd po && \
-	intltool-update --pot -g keys
-
-update-po:
-	for f in $(shell find po/ -name "*.po") ; do \
-		msgmerge -N --backup=none -U $$f po/keys.pot ; \
-	done
-
-uniq-po:
-	for f in $(shell find po/ -name "*.po") ; do \
-		msguniq $$f -o $$f ; \
-	done
-
-# Compile translations
-compile-po:
-	@ echo -n "Compiling po files for: " ; \
-	for lang in $(basename $(notdir $(wildcard po/*.po))) ; do \
-		echo -n "$$lang " ; \
-		mkdir -p po/build/$$lang/LC_MESSAGES/ ; \
-		msgfmt --check-format --check-domain -o po/build/$$lang/LC_MESSAGES/rhsm.mo po/$$lang.po ; \
-	done ; \
-	echo ;
-
-# just run a check to make sure these compile
-polint:
-	# This is just informational, most zanata po files dont pass
-	for lang in $(basename $(notdir $(wildcard po/*.po))) ; do \
-		msgfmt -c -o /dev/null po/$$lang.po ; \
-	done ;
-
 just-strings:
 	-@ scripts/just_strings.py po/keys.pot
 
@@ -777,8 +715,8 @@ zanata-push:
 	popd
 
 # do all the zanata bits
-zanata: gettext zanata-push zanata-pull update-po
-	echo "# pofiles should be ready to commit and push"
+# zanata: gettext zanata-push zanata-pull update-po
+#	echo "# pofiles should be ready to commit and push"
 
 # generate a en_US.po with long strings for testing
 gen-test-long-po:
